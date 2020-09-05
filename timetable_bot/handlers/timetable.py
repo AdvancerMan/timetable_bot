@@ -13,7 +13,7 @@ from timetable_bot.user_data import UserData
 from timetable_bot.decorators import *
 from timetable_bot.utils import *
 
-__all__ = ["create_add_event_handler", "timetable"]
+__all__ = ["create_add_event_handler", "timetable", "whole_timetable"]
 logger = logging.getLogger(__name__)
 
 
@@ -37,26 +37,46 @@ table_periods = [
     (datetime.time(18, 40), datetime.time(20, 10)),
 ]
 
+days_of_week = [
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
+    "Friday",
+    "Saturday",
+    "Sunday",
+]
+
 
 @bot_command("table")
 @for_registered_user
-def timetable(update: telegram.Update, context: telegram.ext.CallbackContext):
+def timetable(update, context, day_of_week=None):
     # TODO even week or not
-    day_of_week = datetime.date.today().weekday()
+    if day_of_week is None:
+        day_of_week = datetime.date.today().weekday()
     today_table = context.user_data[UserData.TABLE][day_of_week]
 
     events = [f"{event[AddEventType.SUBJECT]} "
-              f"\\[{AddEventType.CLASSROOM}] "
-              f"({AddEventType.LESSON_TYPE}) - "
-              f"{AddEventType.TEACHER}"
+              f"[{event[AddEventType.CLASSROOM]}] "
+              f"({event[AddEventType.LESSON_TYPE]}) - "
+              f"{event[AddEventType.TEACHER]}"
               if event else 'No event'
               for event in today_table]
 
     double_linesep = os.linesep * 2
-    update.message.reply_markdown(double_linesep.join(
-        f"-  {period[0]} - {period[1]} - {event}"
-        for period, event in zip(table_periods, events)
-    ) + double_linesep)
+    update.message.reply_text(double_linesep.join([
+        f"{days_of_week[day_of_week]}:",
+        *[f"-  {period[0]} - {period[1]} - {event}"
+          for period, event in zip(table_periods, events)]
+    ]))
+
+
+@bot_command("whole_table")
+@for_registered_user
+def whole_timetable(update, context):
+    # TODO even week or not
+    for i in range(7):
+        timetable(update, context, i)
 
 
 def create_add_event_handlers():
@@ -127,20 +147,23 @@ def create_add_event_handlers():
 
 
 def create_add_event_handler():
+    # FIXME renaming event --> lesson
+    stop_handler = telegram.ext.CommandHandler('stop', stop_add_event)
     return telegram.ext.ConversationHandler(
         entry_points=[
-            telegram.ext.CommandHandler('add_event', start_add_event)
+            telegram.ext.CommandHandler('add_lesson', start_add_event)
         ],
 
         states={
             event_type: [
+                stop_handler,
                 telegram.ext.MessageHandler(telegram.ext.Filters.text, handler)
             ]
             for event_type, handler
             in zip(AddEventType, create_add_event_handlers())
         },
 
-        fallbacks=[telegram.ext.CommandHandler('stop', stop_add_event)],
+        fallbacks=[stop_handler],
     )
 
 
@@ -164,8 +187,9 @@ def start_add_event(update, context):
 
 
 @bot_command("stop")
-def stop_add_event(update, context):
+def stop_add_event(update: telegram.Update, context):
     del context.user_data["add_event"]
+    update.message.reply_text("Ended changing timetable!")
     return telegram.ext.ConversationHandler.END
 
 

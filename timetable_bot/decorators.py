@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 
 def message_handling_command(what_to_handle=""):
     def decorator(handler):
-        def wrapper(update: telegram.Update, context):
+        def wrapper(update, context, *args, **kwargs):
             logger.info(f"Handling {what_to_handle},"
                         f" message: [{update.message.text}]"
                         f" for {update.effective_user.id} user"
                         f" ({update.effective_user.full_name})")
-            return handler(update, context)
+            return handler(update, context, *args, **kwargs)
 
         return wrapper
 
@@ -43,7 +43,7 @@ def register_user(user, user_data):
 
 
 def for_registered_user(callback):
-    def wrapper(update: telegram.Update, context: telegram.ext.CallbackContext):
+    def wrapper(update, context, *args, **kwargs):
         registered = context.user_data.get(UserData.IS_REGISTERED)
 
         if not registered and update.effective_user.id in registered_users:
@@ -51,7 +51,7 @@ def for_registered_user(callback):
             registered = True
 
         if registered:
-            return callback(update, context)
+            return callback(update, context, *args, **kwargs)
         else:
             update.message.reply_text("Sorry, you are not registered")
             return telegram.ext.ConversationHandler.END

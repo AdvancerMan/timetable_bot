@@ -33,7 +33,9 @@ def main():
     dp.user_data.update(user_data)
 
     dp.add_handler(telegram.ext.CommandHandler('help', help_command))
+    dp.add_handler(telegram.ext.CommandHandler('start', help_command))
     dp.add_handler(telegram.ext.CommandHandler('table', timetable))
+    dp.add_handler(telegram.ext.CommandHandler('whole_table', whole_timetable))
     dp.add_handler(create_add_event_handler())
 
     updater.start_polling()
