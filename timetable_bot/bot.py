@@ -6,28 +6,11 @@ import logging
 import telegram
 import telegram.ext
 
-from timetable_bot.decorators import *
-from timetable_bot.utils import *
+from timetable_bot.handlers.simple_handlers import *
+from timetable_bot.handlers.timetable import *
 from timetable_bot.user_data import *
 
 logger = logging.getLogger(__name__)
-
-
-@bot_command("help")
-def help_command(update, context):
-    update.message.reply_markdown(trim_indent(f"""
-        You are{
-            " not" if not context.user_data.get(UserData.IS_REGISTERED) else ""
-        } registered
-
-        /table - Your timetable
-    """))
-
-
-@bot_command("table")
-@for_registered_user
-def timetable(update: telegram.Update, context: telegram.ext.CallbackContext):
-    update.message.reply_text("Ok! You are registered!")
 
 
 def main():
@@ -51,6 +34,7 @@ def main():
 
     dp.add_handler(telegram.ext.CommandHandler('help', help_command))
     dp.add_handler(telegram.ext.CommandHandler('table', timetable))
+    dp.add_handler(create_add_event_handler())
 
     updater.start_polling()
     logger.info("Initializing done!")
