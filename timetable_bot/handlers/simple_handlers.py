@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @bot_command("help")
 def help_command(update, context):
-    update.message.reply_markdown(trim_indent(f"""
+    update.message.reply_text(trim_indent(f"""
         Вы{
             " не" if not context.user_data.get(UserData.IS_REGISTERED) else ""
         } зарегистрированы
@@ -22,4 +22,5 @@ def help_command(update, context):
         /table - Расписание на ближайшие занятия
         /whole_table - Все расписание
         /add_lesson - Добавить урок в расписание
+        /stop - Остановить введение данных (например, при добавлении урока)
     """))
