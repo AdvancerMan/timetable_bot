@@ -5,6 +5,7 @@ import logging
 import enum
 import os
 import datetime
+import itertools
 
 import telegram
 import telegram.ext
@@ -48,27 +49,51 @@ days_of_week = [
 ]
 
 
+TZ_UTC_OFFSET = datetime.timedelta(hours=3)
+
+
+def get_nearest_time_period():
+    now = (datetime.datetime.now(datetime.timezone.utc) + TZ_UTC_OFFSET).time()
+    return min(period for period in table_periods if now <= period[1])
+
+
 @bot_command("table")
 @for_registered_user
 def timetable(update, context, day_of_week=None):
     # TODO even week or not
     if day_of_week is None:
         day_of_week = datetime.date.today().weekday()
+        nearest_period = get_nearest_time_period()
+    else:
+        nearest_period = None
+
     today_table = context.user_data[UserData.TABLE][day_of_week]
 
     events = [f"{event[AddEventType.SUBJECT]} "
               f"[{event[AddEventType.CLASSROOM]}] "
               f"({event[AddEventType.LESSON_TYPE]}) - "
               f"{event[AddEventType.TEACHER]}"
-              if event else 'No event'
-              for event in today_table]
+              if event else ''
+              for event in
+              list(itertools.dropwhile(
+                  lambda x: not x,
+                  today_table[::-1]
+              ))[::-1]]
 
     double_linesep = os.linesep * 2
-    update.message.reply_text(double_linesep.join([
-        f"{days_of_week[day_of_week]}:",
-        *[f"-  {period[0]} - {period[1]} - {event}"
-          for period, event in zip(table_periods, events)]
-    ]))
+
+    day = f"{days_of_week[day_of_week]}:"
+    if len(events) == 0:
+        reply = double_linesep.join([day, "No events"])
+    else:
+        reply = double_linesep.join([
+            day,
+            *[f"{'>>>>>>' if period == nearest_period else '-'}  "
+              f"{period[0]} - {period[1]} - {event}"
+              for period, event in zip(table_periods, events)]
+        ])
+
+    update.message.reply_text(reply)
 
 
 @bot_command("whole_table")
