@@ -32,6 +32,8 @@ def main():
     dp: telegram.ext.Dispatcher = updater.dispatcher
     dp.user_data.update(user_data)
 
+    # TODO deadlines tracker
+    # TODO other tasks tracker (e.g. buy batteries)
     dp.add_handler(telegram.ext.CommandHandler('help', help_command))
     dp.add_handler(telegram.ext.CommandHandler('start', help_command))
     dp.add_handler(telegram.ext.CommandHandler('table', timetable))

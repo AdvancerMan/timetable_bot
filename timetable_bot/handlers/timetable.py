@@ -28,6 +28,7 @@ class AddEventType(enum.Enum):
     TEACHER = 6
 
 
+# TODO store periods for each user
 table_periods = [
     (datetime.time(8, 20), datetime.time(9, 50)),
     (datetime.time(10, 0), datetime.time(11, 30)),
@@ -39,69 +40,83 @@ table_periods = [
 ]
 
 days_of_week = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
-    "Sunday",
+    "Понедельник",
+    "Вторник",
+    "Среда",
+    "Четверг",
+    "Пятница",
+    "Суббота",
+    "Воскресенье",
 ]
-
 
 TZ_UTC_OFFSET = datetime.timedelta(hours=3)
 
 
-def get_nearest_time_period():
+def get_nearest_time_period_index():
     now = (datetime.datetime.now(datetime.timezone.utc) + TZ_UTC_OFFSET).time()
-    return min(period for period in table_periods if now <= period[1])
+    future_periods = [period for period in table_periods if now <= period[1]]
+    return table_periods.index(min(future_periods)) \
+        if len(future_periods) != 0 else None
 
 
-@bot_command("table")
-@for_registered_user
-def timetable(update, context, day_of_week=None):
-    # TODO even week or not
-    if day_of_week is None:
-        day_of_week = datetime.date.today().weekday()
-        nearest_period = get_nearest_time_period()
-    else:
-        nearest_period = None
-
-    today_table = context.user_data[UserData.TABLE][day_of_week]
+def timetable_pretty_string(context, day_of_week,
+                            today_table=None, highlight_index=None):
+    if today_table is None:
+        today_table = context.user_data[UserData.TABLE][day_of_week]
 
     events = [f"{event[AddEventType.SUBJECT]} "
               f"[{event[AddEventType.CLASSROOM]}] "
               f"({event[AddEventType.LESSON_TYPE]}) - "
               f"{event[AddEventType.TEACHER]}"
-              if event else ''
-              for event in
+              if event else '' for event in
               list(itertools.dropwhile(
                   lambda x: not x,
                   today_table[::-1]
               ))[::-1]]
 
-    double_linesep = os.linesep * 2
-
     day = f"{days_of_week[day_of_week]}:"
     if len(events) == 0:
-        reply = double_linesep.join([day, "No events"])
+        return (os.linesep * 2).join([day, "Выходной"])
     else:
-        reply = double_linesep.join([
+        return (os.linesep * 2).join([
             day,
-            *[f"{'>>>>>>' if period == nearest_period else '-'}  "
-              f"{period[0]} - {period[1]} - {event}"
-              for period, event in zip(table_periods, events)]
+            *[f"{'>>>>>>' if i == highlight_index else '-'}  "
+              f"{table_periods[i][0]} - {table_periods[i][1]} - {events[i]}"
+              for i in range(len(events))]
         ])
 
-    update.message.reply_text(reply)
+
+@bot_command("table")
+@for_registered_user
+def timetable(update, context):
+    # TODO even week or not
+    day_of_week = datetime.date.today().weekday()
+    nearest_index = get_nearest_time_period_index()
+    today_table = context.user_data[UserData.TABLE][day_of_week]
+
+    if not nearest_index \
+            or len([x for x in today_table[nearest_index:] if x]) == 0:
+        day_of_week = (day_of_week + 1) % 7
+        nearest_index = 0
+        today_table = context.user_data[UserData.TABLE][day_of_week]
+
+    update.message.reply_text(timetable_pretty_string(
+        context, day_of_week, today_table, nearest_index
+    ))
 
 
 @bot_command("whole_table")
 @for_registered_user
 def whole_timetable(update, context):
     # TODO even week or not
-    for i in range(7):
-        timetable(update, context, i)
+    tables = [[s for s in timetable_pretty_string(context, i).splitlines() if s]
+              for i in range(7)]
+    update.message.reply_text(
+        (os.linesep * 2).join(os.linesep.join(table) for table in tables)
+    )
+
+
+ud_choice = "__choice__"
 
 
 def create_add_event_handlers():
@@ -109,7 +124,7 @@ def create_add_event_handlers():
         def wrapper(update, context):
             handler(update, context)
 
-            ud = context.user_data["add_event"]
+            ud = context.user_data[ud_choice]
             day = (ud[AddEventType.DAY] + 6) % 7  # TODO even week or not
             time = ud[AddEventType.TIME] - 1
 
@@ -192,10 +207,10 @@ def create_add_event_handler():
     )
 
 
-@bot_command("add_event")
+@bot_command("add_lesson")
 @for_registered_user
 def start_add_event(update, context):
-    context.user_data["add_event"] = {}
+    context.user_data[ud_choice] = {}
     update.message.reply_text(trim_indent("""
         Please, enter day of week for your lesson:
         
@@ -213,7 +228,7 @@ def start_add_event(update, context):
 
 @bot_command("stop")
 def stop_add_event(update: telegram.Update, context):
-    del context.user_data["add_event"]
+    del context.user_data[ud_choice]
     update.message.reply_text("Ended changing timetable!")
     return telegram.ext.ConversationHandler.END
 
@@ -237,7 +252,7 @@ def create_question(this_type, next_type=None, what_to_enter_next=None,
                                       f" please, retry")
             return this_type
 
-        context.user_data["add_event"][this_type] = parse_data(data)
+        context.user_data[ud_choice][this_type] = parse_data(data)
         if next_type:
             update.message.reply_text(f"Please, enter {what_to_enter_next}")
             return next_type
