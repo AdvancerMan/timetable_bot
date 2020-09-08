@@ -14,9 +14,12 @@ logger = logging.getLogger(__name__)
 @bot_command("help")
 def help_command(update, context):
     update.message.reply_markdown(trim_indent(f"""
-        You are{
-            " not" if not context.user_data.get(UserData.IS_REGISTERED) else ""
-        } registered
+        Вы{
+            " не" if not context.user_data.get(UserData.IS_REGISTERED) else ""
+        } зарегистрированы
 
-        /table - Your timetable
+        /help - Вывести справку
+        /table - Расписание на ближайшие занятия
+        /whole_table - Все расписание
+        /add_lesson - Добавить урок в расписание
     """))

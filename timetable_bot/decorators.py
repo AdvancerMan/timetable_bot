@@ -53,7 +53,7 @@ def for_registered_user(callback):
         if registered:
             return callback(update, context, *args, **kwargs)
         else:
-            update.message.reply_text("Sorry, you are not registered")
+            update.message.reply_text("Прости, ты не зарегистрирован(")
             return telegram.ext.ConversationHandler.END
 
     return wrapper

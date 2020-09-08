@@ -81,7 +81,8 @@ def timetable_pretty_string(context, day_of_week,
         return (os.linesep * 2).join([
             day,
             *[f"{'>>>>>>' if i == highlight_index else '-'}  "
-              f"{table_periods[i][0]} - {table_periods[i][1]} - {events[i]}"
+              f"{table_periods[i][0].strftime('%H:%M')} - "
+              f"{table_periods[i][1].strftime('%H:%M')} - {events[i]}"
               for i in range(len(events))]
         ])
 
@@ -144,42 +145,43 @@ def create_add_event_handlers():
     return [
         create_question(
             AddEventType.DAY, AddEventType.IS_EVEN,
-            "on which weeks lesson is (0 - even, 1 - odd, 2 - both)",
-            int, "value should be in range 0-7",
+            "четность недели (0 - четная, 1 - нечетная, 2 - обе)",
+            int, "значение должно быть в радиусе 0-7",
             lambda x: x in [str(x) for x in range(8)]
         ),
 
         create_question(
             AddEventType.IS_EVEN, AddEventType.TIME,
             trim_indent(
-                "time of the lesson:" + os.linesep + os.linesep +
-                os.linesep.join(f"{i + 1} - {start} - {end}" for i, (start, end)
+                "время урока:" + os.linesep + os.linesep +
+                os.linesep.join(f"{i + 1} - {start.strftime('%H:%M')} - "
+                                f"{end.strftime('%H:%M')}" for i, (start, end)
                                 in zip(range(len(table_periods)),
                                        table_periods))
-            ), int, "value should be 0, 1 or 2",
+            ), int, "значение должно быть 0, 1 или 2",
             lambda x: x in [str(x) for x in range(3)]
         ),
 
         create_question(
             AddEventType.TIME, AddEventType.SUBJECT,
-            "subject of the lesson", int,
-            f"value should be in range 1-{len(table_periods)}",
+            "предмет по которому проводится урок", int,
+            f"значение должно быть в радиусе 1-{len(table_periods)}",
             lambda x: x in [str(x) for x in range(1, len(table_periods) + 1)]
         ),
 
         create_question(
             AddEventType.SUBJECT, AddEventType.LESSON_TYPE,
-            "lesson type (might be lab or lection)"
+            "тип урока (например, лабораторная или лекция)"
         ),
 
         create_question(
             AddEventType.LESSON_TYPE, AddEventType.CLASSROOM,
-            "classroom for the lesson"
+            "номер аудитории"
         ),
 
         create_question(
             AddEventType.CLASSROOM, AddEventType.TEACHER,
-            "lesson teacher"
+            "ФИО преподавателя"
         ),
 
         last_handler(create_question(AddEventType.TEACHER))
@@ -212,16 +214,16 @@ def create_add_event_handler():
 def start_add_event(update, context):
     context.user_data[ud_choice] = {}
     update.message.reply_text(trim_indent("""
-        Please, enter day of week for your lesson:
+        Пожалуйста, введите день недели для урока:
         
-        0 - Sunday
-        1 - Monday
-        2 - Tuesday
-        3 - Wednesday
-        4 - Thursday
-        5 - Friday
-        6 - Saturday
-        7 - Sunday again
+        0 - Воскресенье
+        1 - Понедельник
+        2 - Вторник
+        3 - Среда
+        4 - Четверг
+        5 - Пятница
+        6 - Суббота
+        7 - Опять воскресенье
     """))
     return AddEventType.DAY
 
@@ -229,7 +231,7 @@ def start_add_event(update, context):
 @bot_command("stop")
 def stop_add_event(update: telegram.Update, context):
     del context.user_data[ud_choice]
-    update.message.reply_text("Ended changing timetable!")
+    update.message.reply_text("Изменение завершено!")
     return telegram.ext.ConversationHandler.END
 
 
@@ -248,13 +250,14 @@ def create_question(this_type, next_type=None, what_to_enter_next=None,
                     f" {'good' if good_data else 'bad'} data")
 
         if not good_data:
-            update.message.reply_text(f"Error: {bad_data_message},"
-                                      f" please, retry")
+            update.message.reply_text(f"ОШИБКА: {bad_data_message},"
+                                      f" пожалуйста, не ошибайся")
             return this_type
 
         context.user_data[ud_choice][this_type] = parse_data(data)
         if next_type:
-            update.message.reply_text(f"Please, enter {what_to_enter_next}")
+            update.message.reply_text(f"Пожалуйста, введите "
+                                      f"{what_to_enter_next}")
             return next_type
 
     return question
