@@ -19,13 +19,13 @@ logger = logging.getLogger(__name__)
 
 
 class AddEventType(enum.Enum):
-    DAY = enum.auto
-    IS_EVEN = enum.auto
-    TIME = enum.auto
-    SUBJECT = enum.auto
-    LESSON_TYPE = enum.auto
-    CLASSROOM = enum.auto
-    TEACHER = enum.auto
+    DAY = enum.auto()
+    IS_EVEN = enum.auto()
+    TIME = enum.auto()
+    SUBJECT = enum.auto()
+    LESSON_TYPE = enum.auto()
+    CLASSROOM = enum.auto()
+    TEACHER = enum.auto()
 
 
 # TODO store periods for each user
