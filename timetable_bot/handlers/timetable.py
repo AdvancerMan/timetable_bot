@@ -95,7 +95,7 @@ def timetable(update, context):
     nearest_index = get_nearest_time_period_index()
     today_table = context.user_data[UserData.TABLE][day_of_week]
 
-    if not nearest_index \
+    if nearest_index is None \
             or len([x for x in today_table[nearest_index:] if x]) == 0:
         day_of_week = (day_of_week + 1) % 7
         nearest_index = 0
