@@ -30,29 +30,12 @@ def bot_command(command_name):
     return message_handling_command("/%s command" % command_name)
 
 
-with open("registered_users.txt") as f:
-    registered_users = [int(line.strip()) for line in f.read().splitlines()]
-
-
-def register_user(user, user_data):
-    logger.info(f"Registering user {user.id} ({user.full_name})")
-    user_data[UserData.IS_REGISTERED] = True
-    # FIXME bad code with hardcoded len
-    user_data[UserData.TABLE] = [[None for _ in range(7)]  # len(table_periods)
-                                 for _ in range(14)]
-
-
 def for_registered_user(callback):
     def wrapper(update, context, *args, **kwargs):
-        registered = context.user_data.get(UserData.IS_REGISTERED)
-
-        if not registered and update.effective_user.id in registered_users:
-            register_user(update.effective_user, context.user_data)
-            registered = True
-
-        if registered:
+        if context.user_data.get(UserData.IS_REGISTERED):
             return callback(update, context, *args, **kwargs)
         else:
+            logger.info(f"User {update.effective_user.id} is not registered")
             update.message.reply_text("Прости, ты не зарегистрирован(")
             return telegram.ext.ConversationHandler.END
 

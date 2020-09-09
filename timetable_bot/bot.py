@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import collections
 
 import telegram
 import telegram.ext
@@ -23,7 +24,14 @@ def main():
     logger.info("Loading user data...")
     user_data = load_user_data()
     if user_data is None:
-        user_data = {}
+        user_data = collections.defaultdict(dict)
+
+    with open("registered_users.txt") as f:
+        registered_users = [int(line.strip()) for line in f.read().splitlines()]
+
+    for user_id in registered_users:
+        if not user_data[user_id].get(UserData.IS_REGISTERED):
+            register_user(user_id, user_data[user_id])
 
     logger.info("Initializing bot...")
     with open("bot_token.txt") as f:
