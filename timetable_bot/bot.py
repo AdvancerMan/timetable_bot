@@ -44,18 +44,11 @@ def main():
     # TODO /remove_lesson
     # TODO deadlines tracker
     # TODO other tasks tracker (e.g. buy batteries)
-    dp.add_handler(telegram.ext.CommandHandler('help', help_command))
-    dp.add_handler(telegram.ext.CommandHandler('start', help_command))
-    dp.add_handler(telegram.ext.CommandHandler('table', timetable))
-    dp.add_handler(telegram.ext.CommandHandler('whole_table', whole_timetable))
-    dp.add_handler(create_conversation("add_lesson", add_lesson,
-                                       Questions.DAY_OF_WEEK,
-                                       Questions.IS_EVEN_WEEK,
-                                       Questions.TIME_PERIOD,
-                                       Questions.LESSON_SUBJECT,
-                                       Questions.LESSON_TYPE,
-                                       Questions.CLASSROOM,
-                                       Questions.TEACHER))
+    dp.add_handler(start)
+    dp.add_handler(help_command)
+    dp.add_handler(timetable)
+    dp.add_handler(whole_timetable)
+    dp.add_handler(add_lesson)
 
     updater.start_polling()
     logger.info("Initializing done!")
