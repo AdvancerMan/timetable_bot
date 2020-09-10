@@ -26,13 +26,6 @@ def main():
     if user_data is None:
         user_data = collections.defaultdict(dict)
 
-    with open("registered_users.txt") as f:
-        registered_users = [int(line.strip()) for line in f.read().splitlines()]
-
-    for user_id in registered_users:
-        if not user_data[user_id].get(UserData.IS_REGISTERED):
-            register_user(user_id, user_data[user_id])
-
     logger.info("Initializing bot...")
     with open("bot_token.txt") as f:
         updater = telegram.ext.Updater(f.read(), use_context=True)
@@ -40,12 +33,13 @@ def main():
     dp: telegram.ext.Dispatcher = updater.dispatcher
     dp.user_data.update(user_data)
 
-    # TODO @for_admins /register by forwarding message
     # TODO /remove_lesson
     # TODO deadlines tracker
     # TODO other tasks tracker (e.g. buy batteries)
     dp.add_handler(start)
     dp.add_handler(help_command)
+    dp.add_handler(admin_help)
+    dp.add_handler(register_command)
     dp.add_handler(timetable)
     dp.add_handler(whole_timetable)
     dp.add_handler(add_lesson)

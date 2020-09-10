@@ -96,5 +96,6 @@ add_lesson = create_conversation(
     "add_lesson", _add_lesson,
     Questions.DAY_OF_WEEK, Questions.IS_EVEN_WEEK, Questions.TIME_PERIOD,
     Questions.LESSON_SUBJECT, Questions.LESSON_TYPE,
-    Questions.CLASSROOM, Questions.TEACHER
+    Questions.CLASSROOM, Questions.TEACHER,
+    privileges_decorator=for_registered_user
 )

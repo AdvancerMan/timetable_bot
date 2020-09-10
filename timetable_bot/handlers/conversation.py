@@ -11,7 +11,9 @@ from timetable_bot.decorators import *
 from timetable_bot.user_data import *
 from timetable_bot.constants import *
 
-__all__ = ["create_conversation", "Questions"]
+__all__ = ["create_conversation", "Question",
+           "ChooseInRangeQuestion", "Questions",
+           "TgConvBadInput"]
 logger = logging.getLogger(__name__)
 
 
@@ -28,7 +30,7 @@ class Question:
         pass
 
     def parse_answer(self, answer):
-        return answer
+        return answer.text
 
     @property
     def input_prompt(self):
@@ -46,6 +48,7 @@ class ChooseInRangeQuestion(Question):
         self.choices_names = choices_names
 
     def parse_answer(self, answer):
+        answer = super(ChooseInRangeQuestion, self).parse_answer(answer)
         return self.choices[int(answer) - 1] \
             if answer in [str(x) for x in self.range] else TgConvBadInput
 
@@ -79,7 +82,7 @@ def _create_questions_handler(q1, q2, handle_chosen_data, stop_conversation):
     def handler(update: telegram.Update, context: telegram.ext.CallbackContext):
         q1.update(update, context)
 
-        data = q1.parse_answer(update.message.text)
+        data = q1.parse_answer(update.message)
         is_bad_data = data is TgConvBadInput
 
         logger.info(f"User {update.effective_user.id} passed"
@@ -102,11 +105,12 @@ def _create_questions_handler(q1, q2, handle_chosen_data, stop_conversation):
 
 
 def create_conversation(start_command, handle_chosen_data,
-                        first_question, *questions):
+                        first_question, *questions,
+                        privileges_decorator=lambda x: x):
     questions = [first_question, *questions]
 
     @bot_command(start_command)
-    @for_registered_user
+    @privileges_decorator
     def start_conversation(update, context):
         context.user_data[ud_choice] = {}
         first_question.update(update, context)
