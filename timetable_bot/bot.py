@@ -33,7 +33,6 @@ def main():
     dp: telegram.ext.Dispatcher = updater.dispatcher
     dp.user_data.update(user_data)
 
-    # TODO /remove_lesson
     # TODO deadlines tracker
     # TODO other tasks tracker (e.g. buy batteries)
     dp.add_handler(start)
@@ -43,6 +42,7 @@ def main():
     dp.add_handler(timetable)
     dp.add_handler(whole_timetable)
     dp.add_handler(add_lesson)
+    dp.add_handler(remove_lesson)
 
     updater.start_polling()
     logger.info("Initializing done!")

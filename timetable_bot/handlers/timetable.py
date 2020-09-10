@@ -10,7 +10,7 @@ from timetable_bot.decorators import *
 from timetable_bot.constants import *
 from .conversation import *
 
-__all__ = ["timetable", "whole_timetable", "add_lesson"]
+__all__ = ["timetable", "whole_timetable", "add_lesson", "remove_lesson"]
 logger = logging.getLogger(__name__)
 
 
@@ -97,5 +97,18 @@ add_lesson = create_conversation(
     Questions.DAY_OF_WEEK, Questions.IS_EVEN_WEEK, Questions.TIME_PERIOD,
     Questions.LESSON_SUBJECT, Questions.LESSON_TYPE,
     Questions.CLASSROOM, Questions.TEACHER,
+    privileges_decorator=for_registered_user
+)
+
+
+def _remove_lesson(update, context, data):
+    # TODO handle even/odd weeks
+    day = context.user_data[UserData.TABLE][data[UserData.TABLE_DAY]]
+    day[data[UserData.TABLE_TIME]] = None
+
+
+remove_lesson = create_conversation(
+    "remove_lesson", _remove_lesson,
+    Questions.DAY_OF_WEEK, Questions.IS_EVEN_WEEK, Questions.TIME_PERIOD,
     privileges_decorator=for_registered_user
 )
