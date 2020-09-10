@@ -11,8 +11,17 @@ USER_DATA_FILE = "user_data.bin"
 
 
 class UserData(enum.Enum):
-    IS_REGISTERED = enum.auto()
-    TABLE = enum.auto()
+    IS_REGISTERED = 1
+    TABLE = 2
+    IS_ADMIN = 3
+
+    TABLE_DAY = 4
+    TABLE_IS_EVEN = 5
+    TABLE_TIME = 6
+    TABLE_SUBJECT = 7
+    TABLE_LESSON_TYPE = 8
+    TABLE_CLASSROOM = 9
+    TABLE_TEACHER = 10
 
 
 def load_user_data():
