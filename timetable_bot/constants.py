@@ -1,7 +1,6 @@
 import datetime
 
-# TODO store periods for each user
-table_periods = [
+default_table_periods = [
     (datetime.time(8, 20), datetime.time(9, 50)),
     (datetime.time(10, 0), datetime.time(11, 30)),
     (datetime.time(11, 40), datetime.time(13, 10)),

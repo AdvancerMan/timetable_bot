@@ -3,50 +3,29 @@
 
 import logging
 import os
-import itertools
 
 from timetable_bot.user_data import UserData
 from timetable_bot.decorators import *
 from timetable_bot.constants import *
+from .timetable_util import *
 from .conversation import *
 
 __all__ = ["timetable", "whole_timetable", "add_lesson", "remove_lesson"]
 logger = logging.getLogger(__name__)
 
 
-def get_nearest_time_period_index():
-    now = (datetime.datetime.now(datetime.timezone.utc) + TZ_UTC_OFFSET).time()
-    future_periods = [period for period in table_periods if now <= period[1]]
-    return table_periods.index(min(future_periods)) \
-        if len(future_periods) != 0 else None
-
-
-def timetable_pretty_string(context, day_of_week,
-                            today_table=None, highlight_index=None):
-    if today_table is None:
-        today_table = context.user_data[UserData.TABLE][day_of_week]
-
-    lessons = [f"{lesson[UserData.TABLE_SUBJECT]} "
-               f"[{lesson[UserData.TABLE_CLASSROOM]}] "
-               f"({lesson[UserData.TABLE_LESSON_TYPE]}) - "
-               f"{lesson[UserData.TABLE_TEACHER]}"
-               if lesson else '' for lesson in
-               list(itertools.dropwhile(
-                   lambda x: not x,
-                   today_table[::-1]
-               ))[::-1]]
-
-    day = f"{days_of_week[day_of_week]}:"
-    if len(lessons) == 0:
-        return (os.linesep * 2).join([day, "Выходной"])
-    else:
-        return (os.linesep * 2).join([
-            day,
-            *[f"{'>>>>>>' if i == highlight_index else '-'}  "
-              f"{table_periods[i][0].strftime('%H:%M')} - "
-              f"{table_periods[i][1].strftime('%H:%M')} - {lessons[i]}"
-              for i in range(len(lessons))]
-        ])
+def get_nearest_time_periods(periods, now=None):
+    # TODO timezone should be stored for each user
+    if now is None:
+        now = (datetime.datetime.now(datetime.timezone.utc) + TZ_UTC_OFFSET)
+        now = now.time()
+    answer = [period for period in periods if period[0] <= now <= period[1]]
+    if len(answer) == 0:
+        future_periods = [period for period in periods if now <= period[0]]
+        nearest_period = min(future_periods, default=[None])[0]
+        answer = [period for period in future_periods
+                  if period[0] == nearest_period]
+    return answer
 
 
 @bot_command("table")
@@ -54,17 +33,21 @@ def timetable_pretty_string(context, day_of_week,
 def timetable(update, context):
     # TODO even week or not
     day_of_week = datetime.date.today().weekday()
-    nearest_index = get_nearest_time_period_index()
     today_table = context.user_data[UserData.TABLE][day_of_week]
+    nearest_periods = get_nearest_time_periods(today_table.keys())
 
-    if nearest_index is None \
-            or len([x for x in today_table[nearest_index:] if x]) == 0:
+    if nearest_periods == [] \
+            or len([period for period, lesson in today_table
+                    if lesson is not None
+                       and period[0] >= nearest_periods[0][0]]) == 0:
         day_of_week = (day_of_week + 1) % 7
-        nearest_index = 0
         today_table = context.user_data[UserData.TABLE][day_of_week]
+        nearest_periods = get_nearest_time_periods(
+            today_table.keys(), datetime.time(0, 0, 0, 0)
+        )
 
     update.message.reply_text(timetable_pretty_string(
-        context, day_of_week, today_table, nearest_index
+        context, day_of_week, today_table, nearest_periods
     ))
 
 
@@ -94,7 +77,7 @@ def _add_lesson(update, context, choices):
 
 add_lesson = create_conversation(
     "add_lesson", _add_lesson,
-    Questions.DAY_OF_WEEK, Questions.IS_EVEN_WEEK, Questions.TIME_PERIOD,
+    Questions.DAY_OF_WEEK, Questions.IS_EVEN_WEEK, Questions.TABLE_TIME_PERIOD,
     Questions.LESSON_SUBJECT, Questions.LESSON_TYPE,
     Questions.CLASSROOM, Questions.TEACHER,
     privileges_decorator=for_registered_user
@@ -109,6 +92,6 @@ def _remove_lesson(update, context, data):
 
 remove_lesson = create_conversation(
     "remove_lesson", _remove_lesson,
-    Questions.DAY_OF_WEEK, Questions.IS_EVEN_WEEK, Questions.TIME_PERIOD,
+    Questions.DAY_OF_WEEK, Questions.IS_EVEN_WEEK, Questions.TABLE_TIME_PERIOD,
     privileges_decorator=for_registered_user
 )

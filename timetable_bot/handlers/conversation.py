@@ -10,6 +10,7 @@ import logging
 from timetable_bot.decorators import *
 from timetable_bot.user_data import *
 from timetable_bot.constants import *
+from .timetable_util import *
 
 __all__ = ["create_conversation", "Question",
            "ChooseInRangeQuestion", "Questions",
@@ -39,39 +40,6 @@ class Question:
     @property
     def bad_input_message(self):
         return "ОШИБКА, пожалуйста, не ошибайся"
-
-
-class ChooseInRangeQuestion(Question):
-    def __init__(self, q_id, output_name, choices, choices_names):
-        super().__init__(q_id, output_name)
-        self.choices = choices
-        self.choices_names = choices_names
-
-    def parse_answer(self, answer):
-        answer = super(ChooseInRangeQuestion, self).parse_answer(answer)
-        return self.choices[int(answer) - 1] \
-            if answer in [str(x) for x in self.range] else TgConvBadInput
-
-    @property
-    def range(self):
-        return range(1, len(self.choices) + 1)
-
-    @property
-    def pretty_choices(self):
-        return os.linesep * 2 \
-               + os.linesep.join(f"{i} - {choice}"
-                                 for i, choice in zip(self.range,
-                                                      self.choices_names))
-
-    @property
-    def input_prompt(self):
-        return super(ChooseInRangeQuestion, self).input_prompt \
-               + self.pretty_choices
-
-    @property
-    def bad_input_message(self):
-        return super(ChooseInRangeQuestion, self).bad_input_message \
-               + ", вот тебе еще раз подсказка:" + self.pretty_choices
 
 
 ud_choice = "__choice__"
@@ -138,6 +106,58 @@ def create_conversation(start_command, handle_chosen_data,
     )
 
 
+class ChooseInRangeQuestion(Question):
+    def __init__(self, q_id, output_name, choices, choices_names):
+        super().__init__(q_id, output_name)
+        self.choices = choices
+        self.choices_names = choices_names
+
+    def parse_answer(self, answer):
+        answer = super(ChooseInRangeQuestion, self).parse_answer(answer)
+        return self.choices[int(answer) - 1] \
+            if answer in [str(x) for x in self.range] else TgConvBadInput
+
+    @property
+    def range(self):
+        return range(1, len(self.choices) + 1)
+
+    @property
+    def pretty_choices(self):
+        return os.linesep * 2 \
+               + os.linesep.join(f"{i} - {choice}"
+                                 for i, choice in zip(self.range,
+                                                      self.choices_names))
+
+    @property
+    def input_prompt(self):
+        return super(ChooseInRangeQuestion, self).input_prompt \
+               + self.pretty_choices
+
+    @property
+    def bad_input_message(self):
+        return super(ChooseInRangeQuestion, self).bad_input_message \
+               + ", вот тебе еще раз подсказка:" + self.pretty_choices
+
+
+class UserTableTimeQuestion(ChooseInRangeQuestion):
+    """
+        requires Questions.DAY_OF_WEEK and Questions.IS_EVEN_WEEK to be asked
+    """
+
+    def __init__(self, q_id, output_name):
+        super(UserTableTimeQuestion, self).__init__(q_id, output_name, [], [])
+
+    def update(self, update, context):
+        day = context.user_data[ud_choice][UserData.TABLE_DAY]
+        # TODO even week
+        # is_even = context.user_data[ud_choice][UserData.TABLE_IS_EVEN]
+        user_table = context.user_data[UserData.TABLE][day]
+        self.choices = list(user_table.keys())
+        self.choices_names = [x[1:].strip() for x in timetable_pretty_string(
+                                  context, day, cut_suffix=False
+                              ).splitlines()[1:] if x]
+
+
 class Questions:
     DAY_OF_WEEK = ChooseInRangeQuestion(
         UserData.TABLE_DAY, "день недели", range(7), days_of_week
@@ -148,11 +168,8 @@ class Questions:
         ["нечетная", "четная", "обе"]
     )
 
-    TIME_PERIOD = ChooseInRangeQuestion(
-        UserData.TABLE_TIME, "время", range(len(table_periods)),
-        [f"{period[0].strftime('%H:%M')} - {period[1].strftime('%H:%M')}"
-         for period in table_periods]
-    )
+    TABLE_TIME_PERIOD = UserTableTimeQuestion(UserData.TABLE_TIME,
+                                              "время урока")
 
     LESSON_SUBJECT = Question(UserData.TABLE_SUBJECT, "предмет урока")
 
