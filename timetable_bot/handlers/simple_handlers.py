@@ -24,6 +24,8 @@ def show_help(update, context):
         /whole_table - Все расписание
         /add_lesson - Добавить урок в расписание
         /remove_lesson - Удалить урок из расписания
+        /add_period - Добавить период времени в расписание
+        /remove_period - Удалить период времени из расписания (уроки, у которых этот период уже поставлен, не удалятся)
         /stop - Остановить введение данных (например, при добавлении урока)
     """))
 
@@ -54,10 +56,9 @@ def register_user(user_id, user_data):
         return False
     user_data[UserData.IS_REGISTERED] = True
     user_data[UserData.IS_ADMIN] = False
-    # FIXME bad code with hardcoded len
-    user_data[UserData.TABLE] = [{period: None
-                                  for period in default_table_periods}
-                                 for _ in range(14)]
+    user_data[UserData.TABLE_DEFAULT_PERIODS] = [period for period
+                                                 in default_table_periods]
+    user_data[UserData.TABLE] = [{} for _ in range(7 * 2)]
     return True
 
 

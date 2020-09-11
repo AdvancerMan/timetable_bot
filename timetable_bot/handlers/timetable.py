@@ -10,7 +10,9 @@ from timetable_bot.constants import *
 from .timetable_util import *
 from .conversation import *
 
-__all__ = ["timetable", "whole_timetable", "add_lesson", "remove_lesson"]
+__all__ = ["timetable", "whole_timetable",
+           "add_lesson", "remove_lesson",
+           "add_period", "remove_period"]
 logger = logging.getLogger(__name__)
 
 
@@ -87,11 +89,73 @@ add_lesson = create_conversation(
 def _remove_lesson(update, context, data):
     # TODO handle even/odd weeks
     day = context.user_data[UserData.TABLE][data[UserData.TABLE_DAY]]
-    day[data[UserData.TABLE_TIME]] = None
+    del day[data[UserData.TABLE_TIME]]
 
 
 remove_lesson = create_conversation(
     "remove_lesson", _remove_lesson,
     Questions.DAY_OF_WEEK, Questions.IS_EVEN_WEEK, Questions.TABLE_TIME_PERIOD,
+    privileges_decorator=for_registered_user
+)
+
+
+def _add_period(update, context, data):
+    period = (data["period_start"], data["period_end"])
+    user_periods = context.user_data[UserData.TABLE_DEFAULT_PERIODS]
+    if period not in user_periods:
+        user_periods.append(period)
+        user_periods.sort()
+
+
+class AskTimeQuestion(Question):
+    def __init__(self, q_id, output_name):
+        super(AskTimeQuestion, self).__init__(q_id, output_name)
+
+    def parse_answer(self, answer):
+        answer = super(AskTimeQuestion, self).parse_answer(answer)
+        try:
+            return datetime.time.fromisoformat(answer)
+        except ValueError:
+            return TgConvBadInput
+
+    @property
+    def bad_input_message(self):
+        return super(AskTimeQuestion, self).bad_input_message() \
+               + ", время должно быть в формате HH:MM"
+
+
+add_period = create_conversation(
+    "add_period", _add_period,
+    AskTimeQuestion("period_start", "время начала в формате HH:MM"),
+    AskTimeQuestion("period_end", "время конца в формате HH:MM"),
+    privileges_decorator=for_registered_user
+)
+
+
+def _remove_period(update, context, data):
+    period = data[UserData.TABLE_TIME]
+    user_periods = context.user_data[UserData.TABLE_DEFAULT_PERIODS]
+    if period in user_periods:
+        user_periods.remove(period)
+
+
+class ChooseDefaultUserPeriodQuestion(ChooseInRangeQuestion):
+    def __init__(self, q_id, output_name):
+        super(ChooseDefaultUserPeriodQuestion, self).__init__(
+            q_id, output_name, [], []
+        )
+
+    def update(self, update, context):
+        self.choices_names = [' - '.join((moment.strftime('%H:%M')
+                                          for moment in period))
+                              for period in
+                              context.user_data[UserData.TABLE_DEFAULT_PERIODS]]
+        self.choices = context.user_data[UserData.TABLE_DEFAULT_PERIODS]
+
+
+remove_period = create_conversation(
+    "remove_period", _remove_period,
+    ChooseDefaultUserPeriodQuestion(UserData.TABLE_TIME,
+                                    "период, который необходимо удалить"),
     privileges_decorator=for_registered_user
 )

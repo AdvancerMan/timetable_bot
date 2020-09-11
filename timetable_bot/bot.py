@@ -43,6 +43,8 @@ def main():
     dp.add_handler(whole_timetable)
     dp.add_handler(add_lesson)
     dp.add_handler(remove_lesson)
+    dp.add_handler(add_period)
+    dp.add_handler(remove_period)
 
     updater.start_polling()
     logger.info("Initializing done!")

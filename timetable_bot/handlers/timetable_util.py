@@ -16,7 +16,9 @@ def timetable_pretty_string(context, day_of_week,
     if highlight_periods is None:
         highlight_periods = []
 
-    today_table = sorted(today_table.items())
+    default_periods = context.user_data[UserData.TABLE_DEFAULT_PERIODS]
+    today_table = sorted([(period, today_table.get(period, None)) for period
+                          in {*today_table.keys(), *default_periods}])
     useful_periods = list(itertools.dropwhile(
         lambda item: cut_suffix and item[1] is None, today_table[::-1]
     ))[::-1]
