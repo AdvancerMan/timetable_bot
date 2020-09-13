@@ -56,8 +56,8 @@ def register_user(user_id, user_data):
         return False
     user_data[UserData.IS_REGISTERED] = True
     user_data[UserData.IS_ADMIN] = False
-    user_data[UserData.TABLE_DEFAULT_PERIODS] = [period for period
-                                                 in default_table_periods]
+    user_data[UserData.DEFAULT_PERIODS] = [period for period
+                                           in default_table_periods]
     user_data[UserData.TABLE] = [{} for _ in range(7 * 2)]
     return True
 

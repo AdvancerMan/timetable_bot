@@ -4,7 +4,7 @@
 import logging
 import os
 
-from timetable_bot.user_data import UserData
+from timetable_bot.user_data import *
 from timetable_bot.decorators import *
 from timetable_bot.constants import *
 from .timetable_util import *
@@ -19,14 +19,13 @@ logger = logging.getLogger(__name__)
 def get_nearest_time_periods(periods, now=None):
     # TODO timezone should be stored for each user
     if now is None:
-        now = (datetime.datetime.now(datetime.timezone.utc) + TZ_UTC_OFFSET)
-        now = now.time()
+        now = datetime_now(TZ_UTC_OFFSET).time()
     answer = [period for period in periods if period[0] <= now <= period[1]]
     if len(answer) == 0:
         future_periods = [period for period in periods if now <= period[0]]
-        nearest_period = min(future_periods, default=[None])[0]
+        nearest_start = min(future_periods, default=[None])[0]
         answer = [period for period in future_periods
-                  if period[0] == nearest_period]
+                  if period[0] == nearest_start]
     return answer
 
 
@@ -34,18 +33,21 @@ def get_nearest_time_periods(periods, now=None):
 @for_registered_user
 def timetable(update, context):
     # TODO even week or not
-    day_of_week = datetime.date.today().weekday()
+    day_of_week = datetime_now(TZ_UTC_OFFSET).weekday()
     today_table = context.user_data[UserData.TABLE][day_of_week]
-    nearest_periods = get_nearest_time_periods(today_table.keys())
+    table_periods = get_sorted_table_periods(
+        context.user_data, today_table=today_table
+    )
+    nearest_periods = get_nearest_time_periods(table_periods)
 
-    if nearest_periods == [] \
-            or len([period for period, lesson in today_table
-                    if lesson is not None
-                       and period[0] >= nearest_periods[0][0]]) == 0:
+    if nearest_periods == [] or [
+        period for period, lesson in today_table.items()
+        if lesson is not None and period[0] >= nearest_periods[0][0]
+    ] == []:
         day_of_week = (day_of_week + 1) % 7
         today_table = context.user_data[UserData.TABLE][day_of_week]
         nearest_periods = get_nearest_time_periods(
-            today_table.keys(), datetime.time(0, 0, 0, 0)
+            table_periods, datetime.time(0, 0, 0, 0)
         )
 
     update.message.reply_text(timetable_pretty_string(
@@ -101,7 +103,7 @@ remove_lesson = create_conversation(
 
 def _add_period(update, context, data):
     period = (data["period_start"], data["period_end"])
-    user_periods = context.user_data[UserData.TABLE_DEFAULT_PERIODS]
+    user_periods = context.user_data[UserData.DEFAULT_PERIODS]
     if period not in user_periods:
         user_periods.append(period)
         user_periods.sort()
@@ -133,10 +135,8 @@ add_period = create_conversation(
 
 
 def _remove_period(update, context, data):
-    period = data[UserData.TABLE_TIME]
-    user_periods = context.user_data[UserData.TABLE_DEFAULT_PERIODS]
-    if period in user_periods:
-        user_periods.remove(period)
+    context.user_data[UserData.DEFAULT_PERIODS] \
+        .remove(data[UserData.TABLE_TIME])
 
 
 class ChooseDefaultUserPeriodQuestion(ChooseInRangeQuestion):
@@ -149,8 +149,8 @@ class ChooseDefaultUserPeriodQuestion(ChooseInRangeQuestion):
         self.choices_names = [' - '.join((moment.strftime('%H:%M')
                                           for moment in period))
                               for period in
-                              context.user_data[UserData.TABLE_DEFAULT_PERIODS]]
-        self.choices = context.user_data[UserData.TABLE_DEFAULT_PERIODS]
+                              context.user_data[UserData.DEFAULT_PERIODS]]
+        self.choices = context.user_data[UserData.DEFAULT_PERIODS]
 
 
 remove_period = create_conversation(

@@ -33,6 +33,7 @@ def main():
     dp: telegram.ext.Dispatcher = updater.dispatcher
     dp.user_data.update(user_data)
 
+    # TODO /change_lesson
     # TODO deadlines tracker
     # TODO other tasks tracker (e.g. buy batteries)
     dp.add_handler(start)

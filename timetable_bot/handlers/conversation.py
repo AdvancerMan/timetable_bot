@@ -149,11 +149,8 @@ class UserTableTimeQuestion(ChooseInRangeQuestion):
 
     def update(self, update, context):
         day = context.user_data[ud_choice][UserData.TABLE_DAY]
-        # TODO even week
-        # is_even = context.user_data[ud_choice][UserData.TABLE_IS_EVEN]
-        user_table = context.user_data[UserData.TABLE][day]
-        user_periods = context.user_data[UserData.TABLE_DEFAULT_PERIODS]
-        self.choices = list(sorted({*user_table.keys(), *user_periods}))
+        self.choices = get_sorted_table_periods(context.user_data,
+                                                day_of_week=day)
         self.choices_names = [x[1:].strip() for x in timetable_pretty_string(
                                   context, day, cut_suffix=False
                               ).splitlines()[1:] if x]

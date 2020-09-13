@@ -22,7 +22,8 @@ class UserData(enum.Enum):
     TABLE_LESSON_TYPE = 8
     TABLE_CLASSROOM = 9
     TABLE_TEACHER = 10
-    TABLE_DEFAULT_PERIODS = 11
+
+    DEFAULT_PERIODS = 11
 
 
 def load_user_data():
